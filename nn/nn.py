@@ -74,12 +74,12 @@ class Network(object):
         y[self.num_samples:, :] = 0
 
         # train the discriminator network to recognize fake data
-        self.dm.fit(x, y, epochs=10, verbose=0)
+        self.dm.fit(x, y, epochs=1, verbose=1)
 
         # train the entire adversarial network using random noise
         y = np.ones([self.num_samples, 1])
         noise = self.get_noise_input()
-        self.am.fit(noise, y, epochs=50, callbacks=self.callbacks)
+        self.am.fit(noise, y, epochs=1, verbose=1, callbacks=self.callbacks)
     
     def get_noise_input(self):
         return np.random.uniform(0.0, 1.0,
