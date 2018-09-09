@@ -1,5 +1,5 @@
 from keras.activations import relu, sigmoid
-from keras.layers import Dense, Dropout
+from keras.layers import Dense, Dropout, LSTM
 from keras.losses import binary_crossentropy
 from keras.models import Sequential
 from keras.optimizers import RMSprop, SGD
@@ -9,15 +9,13 @@ import numpy as np
 leaky_relu = lambda x: relu(x, alpha=0.01)
 
 class Network(object):
-    def __init__(self, num_samples, callbacks=[], noise_length=100,
-            output_length=1):
-        self.num_samples = num_samples
+    def __init__(self, callbacks=[], noise_length=100):
         self.callbacks = callbacks
         self.noise_length = noise_length
-        self.output_length = output_length
+        self.output_length = 1
 
-        self.gm = Network.generator(noise_length, output_length)
-        self.dm = Network.discriminator(output_length)
+        self.gm = Network.generator(noise_length, self.output_length)
+        self.dm = Network.discriminator(self.output_length)
         self.am = Network.adversarial(self.gm, self.dm)
 
     # network that creates synthetic data using noise as input
@@ -25,9 +23,8 @@ class Network(object):
     def generator(noise_length, output_length):
         gm = Sequential()
 
-        gm.add(Dense(units=noise_length, activation=leaky_relu, input_dim=100))
-        gm.add(Dropout(rate=0.3))
-        gm.add(Dense(units=output_length, activation=leaky_relu))
+        gm.add(LSTM(units=noise_length input_dim=100, dropout=0.3))
+        gm.add(LSTM(units=output_length)
 
         gm.compile(optimizer=SGD(lr=0.01, momentum=0.9, nesterov=True),
                 loss=binary_crossentropy)
@@ -38,12 +35,10 @@ class Network(object):
     @staticmethod
     def discriminator(output_length):
         dm = Sequential()
-        dm.add(Dense(units=output_length, activation=leaky_relu,
-                    input_dim=output_length))
-        dm.add(Dropout(rate=0.3))
-        dm.add(Dense(units=50, activation=leaky_relu))
-        dm.add(Dropout(rate=0.3))
-        dm.add(Dense(units=1, activation=sigmoid))
+        dm.add(LSTM(units=output_length, input_dim=output_length, dropout=0.3))
+        # at the end of the sequence, the discriminator should return the last
+        #  output, which is the final "fakeness" value
+        dm.add(LSTM(units=1, dropout=0.3, return_sequences=True))
         dm.compile(optimizer=RMSprop(lr=0.0008, clipvalue=1.0, decay=6e-8),
                 loss=binary_crossentropy)
 
@@ -60,11 +55,12 @@ class Network(object):
         
         return am
     
+    # trains the neural networks using real audio data
+    # real_data should be a list of numpy arrays that contain all the wav data
     def train(self, real_data):
         # get a mixture of fake (generated) data and real data
         noise = self.get_noise_input()
         fake_data = self.gm.predict(noise)
-        real_data = np.zeros([self.num_samples, self.output_length]) # TODO
         x = np.concatenate((real_data, fake_data))
 
         # expected output of the discriminator network
@@ -81,6 +77,11 @@ class Network(object):
         noise = self.get_noise_input()
         self.am.fit(noise, y, epochs=1, verbose=1, callbacks=self.callbacks)
     
-    def get_noise_input(self):
+    # generates a matrix of noise data for the generator
+    def get_noise_input(self, num_samples):
+
+        np.random.uniform(-1.0, 1.0, size=[])
+
+
         return np.random.uniform(0.0, 1.0,
-            size=[self.num_samples, self.noise_length])
+            size=[num_samples, self.noise_length])
