@@ -44,12 +44,12 @@ for file in glob.glob("./mid/*"):
         unique_notes.update([note_data[0] for note_data in parsed_notes])
 
     songs.append(notes)
-    print(np.array(notes))
 
 num_songs = len(songs)
 
 # map note/chord names to a unique identifier
-note_to_int = dict((note, number) for number, note in enumerate(unique_notes))
+int_to_note = sorted(unique_notes)
+note_to_int = dict((note, number) for number, note in enumerate(int_to_note))
 
 # number of different notes in dataset
 n_vocab = len(unique_notes)
@@ -116,4 +116,11 @@ def train_adversarial():
 
 train_discriminator()
 train_adversarial()
-print("sample generated music: ", generate())
+
+# test stuff
+generated_song = generate()[0]
+processed_song = []
+for note_data in generated_song:
+    processed_song.append([int_to_note[int(note_data[0] * n_vocab)],
+                note_data[1], note_data[2]])
+print(processed_song)
