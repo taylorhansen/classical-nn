@@ -15,14 +15,15 @@ g_input = Input(shape=(None, noise_length))
 lstm1 = LSTM(units=100, dropout=0.4, return_sequences=True)(g_input)
 lstm2 = LSTM(units=50, dropout=0.3, return_sequences=True)(lstm1)
 g_output = Dense(units=note_data_length, activation="sigmoid",
-        name="g_output")(lstm1)
+        name="g_output")(lstm2)
 gm = Model(inputs=g_input, outputs=g_output)
 gm.compile(optimizer=SGD(lr=0.01, momentum=0.9, nesterov=True),
         loss=mean_squared_error)
 
 d_input = Input(shape=(None, note_data_length))
 lstm1 = LSTM(units=100, dropout=0.3)(d_input)
-d_output = Dense(units=1, activation="sigmoid", name="d_output")(lstm1)
+dense1 = Dense(units=50, activation="tanh")(lstm1)
+d_output = Dense(units=1, activation="sigmoid", name="d_output")(dense1)
 dm = Model(inputs=d_input, outputs=d_output)
 dm.compile(optimizer=RMSprop(lr=0.1, clipvalue=1.0, decay=6e-8),
         loss=mean_squared_error)
