@@ -10,6 +10,20 @@ songs = []
 # the set of all possible notes
 unique_notes = set()
 
+# creates an array of encoded notes data, or an empty list if unnecessary
+# each element contains an array consisting of a note's pitch, offset, and
+#  duration
+# chords are expanded into multiple notes
+def parse_element(element):
+    if isinstance(element, chord.Chord):
+        return [[pitch.nameWithOctave, float(element.offset),
+                    float(element.duration.quarterLength)]
+                for pitch in element.pitches]
+    if isinstance(element, note.Note):
+        return [[element.nameWithOctave, float(element.offset),
+                    float(element.duration.quarterLength)]]
+    return []
+
 for file in glob.glob("./mid/*"):
     midi = converter.parse(file)
     notes_to_parse = None
@@ -25,15 +39,12 @@ for file in glob.glob("./mid/*"):
         notes_to_parse = midi.flat.notes
 
     for element in notes_to_parse:
-        if isinstance(element, note.Note):
-            notes.append(element.pitch)
-            unique_notes.add(element.pitch)
-        elif isinstance(element, chord.Chord):
-            c = '.'.join(str(n) for n in element.normalOrder)
-            notes.append(c)
-            unique_notes.add(c)
+        parsed_notes = parse_element(element)
+        notes.extend(parsed_notes)
+        unique_notes.update([note_data[0] for note_data in parsed_notes])
 
     songs.append(notes)
+    print(np.array(notes))
 
 num_songs = len(songs)
 
@@ -49,7 +60,9 @@ for i in range(0, len(songs)):
     current_input = []
     # wrap note id in array brackets
     for j in range(0, len(songs[i])):
-        current_input.append(note_to_int[songs[i][j]])
+        note_data = songs[i][j]
+        current_input.append([note_to_int[note_data[0]], note_data[1],
+                    note_data[2]])
     d_in.append(current_input)
 
 n_patterns = len(d_in)
@@ -58,7 +71,7 @@ n_patterns = len(d_in)
 # basically we need to have each note be its own column vector to be inputted
 #  into the discriminator
 for i in range(len(d_in)):
-    d_in[i] = np.array(d_in[i]).reshape((1, len(d_in[i]), 1)) / float(n_vocab)
+    d_in[i] = np.array(d_in[i]).reshape((1, len(d_in[i]), 3)) / float(n_vocab)
 
 from classical_nn import am, dm, gm
 
@@ -69,3 +82,4 @@ d_out = np.zeros(shape=(1, 1))
 for di in d_in:
     dm.train_on_batch(di, d_out)
     print(dm.predict(di, batch_size=1))
+    pass
