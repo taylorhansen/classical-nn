@@ -126,4 +126,6 @@ processed_song = []
 for note_data in generated_song:
     processed_song.append([int_to_note[int(note_data[0] * n_vocab)],
                 note_data[1], note_data[2]])
-print(processed_song)
+
+from create_midi import create_midi
+create_midi(processed_song)
