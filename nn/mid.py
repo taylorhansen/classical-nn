@@ -16,12 +16,12 @@ unique_notes = set()
 # chords are expanded into multiple notes
 def parse_element(element):
     if isinstance(element, chord.Chord):
-        return [[pitch.nameWithOctave, float(element.offset),
+        return [tuple(pitch.nameWithOctave for pitch in element.pitches),
+                    float(element.offset),
                     float(element.duration.quarterLength)]
-                for pitch in element.pitches]
     if isinstance(element, note.Note):
-        return [[element.nameWithOctave, float(element.offset),
-                    float(element.duration.quarterLength)]]
+        return [element.nameWithOctave, float(element.offset),
+                    float(element.duration.quarterLength)]
     return []
 
 for file in glob.glob("./mid/*"):
@@ -39,16 +39,18 @@ for file in glob.glob("./mid/*"):
         notes_to_parse = midi.flat.notes
 
     for element in notes_to_parse:
-        parsed_notes = parse_element(element)
-        notes.extend(parsed_notes)
-        unique_notes.update([note_data[0] for note_data in parsed_notes])
+        parsed_note = parse_element(element)
+        if len(parsed_note) > 0:
+            notes.append(parsed_note)
+            unique_notes.add(parsed_note[0])
+            x = parsed_note[0]
 
     songs.append(notes)
 
 num_songs = len(songs)
 
 # map note/chord names to a unique identifier
-int_to_note = sorted(unique_notes)
+int_to_note = list(unique_notes)
 note_to_int = dict((note, number) for number, note in enumerate(int_to_note))
 
 # number of different notes in dataset
@@ -71,7 +73,8 @@ n_patterns = len(real_d_in)
 # basically we need to have each note be its own column vector to be inputted
 #  into the discriminator
 for i in range(len(real_d_in)):
-    real_d_in[i] = np.array(real_d_in[i]).reshape((1, len(real_d_in[i]), 3)) / float(n_vocab)
+    real_d_in[i] = np.array(real_d_in[i]).reshape(
+        (1, len(real_d_in[i]), 3)) / float(n_vocab)
 
 # TODO: move to separate file
 
