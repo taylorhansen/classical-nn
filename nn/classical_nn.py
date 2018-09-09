@@ -10,8 +10,7 @@ noise_length = 100
 note_data_length = 3
 
 g_input = Input(shape=(None, noise_length))
-lstm1 = LSTM(units=noise_length, input_shape=(None, noise_length),
-        return_sequences=True)(g_input)
+lstm1 = LSTM(units=noise_length, return_sequences=True)(g_input)
 g_output = Dense(units=note_data_length, activation="sigmoid",
         name="g_output")(lstm1)
 gm = Model(inputs=g_input, outputs=g_output)

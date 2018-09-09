@@ -54,7 +54,7 @@ note_to_int = dict((note, number) for number, note in enumerate(unique_notes))
 # number of different notes in dataset
 n_vocab = len(unique_notes)
 
-d_in = []
+real_d_in = []
 
 for i in range(0, len(songs)):
     current_input = []
@@ -63,23 +63,57 @@ for i in range(0, len(songs)):
         note_data = songs[i][j]
         current_input.append([note_to_int[note_data[0]], note_data[1],
                     note_data[2]])
-    d_in.append(current_input)
+    real_d_in.append(current_input)
 
-n_patterns = len(d_in)
+n_patterns = len(real_d_in)
 
 # reshape input so it's compatible with lstm layers
 # basically we need to have each note be its own column vector to be inputted
 #  into the discriminator
-for i in range(len(d_in)):
-    d_in[i] = np.array(d_in[i]).reshape((1, len(d_in[i]), 3)) / float(n_vocab)
+for i in range(len(real_d_in)):
+    real_d_in[i] = np.array(real_d_in[i]).reshape((1, len(real_d_in[i]), 3)) / float(n_vocab)
 
-from classical_nn import am, dm, gm
+# TODO: move to separate file
 
-# expected output for each song
-d_out = np.zeros(shape=(1, 1))
+from classical_nn import am, dm, gm, noise_length
 
-#dm.fit(d_in, d_out, batch_size=1, epochs=1, verbose=1)
-for di in d_in:
-    dm.train_on_batch(di, d_out)
-    print(dm.predict(di, batch_size=1))
-    pass
+def get_noise_vector():
+    return np.random.uniform(size=(1, noise_length))
+
+# generate an amount of notes using the generator
+def generate(g_notes=500):
+    noise_vector = get_noise_vector()
+    g_in = np.full(shape=(1, g_notes, noise_length), fill_value=noise_vector)
+    return gm.predict(g_in, batch_size=1)
+
+# trains the discriminator network for one full epoch
+def train_discriminator():
+
+    # expected output for each type song
+    real = np.zeros(shape=(1, 1))
+    fake = np.ones(shape=(1, 1))
+
+    # generate training data
+    d_in = []
+    d_out = []
+    for i in range(len(real_d_in)):
+        d_in.append(real_d_in[i])
+        d_out.append(np.array(real))
+        d_in.append(generate(np.random.randint(100, 1000)).reshape((1, -1, 3)))
+        d_out.append(np.array(fake))
+
+    # train one full epoch with all the training data
+    for x, y in zip(d_in, d_out):
+        dm.train_on_batch(x, y)
+
+# trains the adversarial (generator+discriminator) network for one full batch
+def train_adversarial():
+    g_notes = np.random.randint(100, 1000)
+    noise_vector = get_noise_vector()
+    a_in = np.full(shape=(1, g_notes, noise_length), fill_value=noise_vector)
+    a_out = np.ones(shape=(1, 1))
+    am.train_on_batch(a_in, a_out)
+
+train_discriminator()
+train_adversarial()
+print("sample generated music: ", generate())
